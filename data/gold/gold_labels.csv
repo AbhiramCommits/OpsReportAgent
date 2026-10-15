@@ -1,0 +1,61 @@
+source_file,category,store_id,incident_date,vendor,dollar_impact,severity
+incident_000.pdf,Equipment Failure,ST-007,2026-08-31,Vertex Mechanical,4459.22,Medium
+incident_001.pdf,Food Safety,ST-019,2026-09-10,Sterling Food Group,3955.83,High
+incident_002.pdf,Vendor Delivery,ST-011,2026-09-20,Ridgeline Distribution,2420.33,High
+incident_003.pdf,Safety Incident,ST-001,2026-09-23,Aegis Compliance Supply,11788.52,
+incident_004.pdf,POS/IT Outage,ST-003,2026-10-03,Gridpoint Networks,7608.60,Low
+incident_005.pdf,Facilities,ST-006,2026-10-06,Ironwood Facilities,11853.32,Medium
+incident_006.pdf,Inventory Shrink,ST-010,2026-09-04,Sentinel Audit Group,8528.11,Medium
+incident_007.pdf,Equipment Failure,ST-020,2026-09-07,Northwind Cold Chain,11761.52,High
+incident_008.pdf,Food Safety,ST-013,2026-09-17,GreenLeaf Produce,3821.86,Critical
+incident_009.pdf,Vendor Delivery,,2026-09-27,Cascade Beverage,,
+incident_010.pdf,Safety Incident,ST-005,2026-09-30,Aegis Compliance Supply,5211.46,Critical
+incident_011.pdf,POS/IT Outage,ST-001,2026-10-10,Teller Support Services,6144.18,Low
+incident_012.pdf,Facilities,ST-008,2026-09-01,Keystone Building Services,17881.00,Medium
+incident_013.pdf,Inventory Shrink,ST-013,2026-09-11,Sentinel Audit Group,6408.05,High
+incident_014.pdf,Equipment Failure,ST-017,2026-09-14,Vertex Mechanical,4580.30,Medium
+incident_015.pdf,Food Safety,ST-008,2026-09-24,Harbor Dairy Co,3310.84,
+incident_016.pdf,Vendor Delivery,ST-010,2026-10-04,BluePeak Logistics,7265.37,Medium
+incident_017.pdf,Safety Incident,ST-014,2026-10-07,Sentinel Compliance Group,14910.80,Critical
+incident_018.pdf,POS/IT Outage,ST-019,2026-09-05,Gridpoint Networks,8645.10,High
+incident_019.pdf,Facilities,ST-009,2026-09-08,Ironwood Facilities,2140.80,Low
+store_email_040.eml,Facilities,ST-006,2026-09-29,Anchor Maintenance,14513.71,Low
+store_email_041.eml,Inventory Shrink,ST-015,2026-10-09,Watchtower Loss Prevention,471.44,Medium
+store_email_042.eml,Equipment Failure,ST-003,2026-08-31,Vertex Mechanical,4980.19,High
+store_email_043.eml,Food Safety,ST-011,2026-09-10,GreenLeaf Produce,1630.45,Medium
+store_email_044.eml,Vendor Delivery,ST-018,2026-09-20,Ridgeline Distribution,1924.57,Medium
+store_email_045.eml,Safety Incident,,2026-09-23,Sentinel Compliance Group,,
+store_email_046.eml,POS/IT Outage,ST-016,2026-10-03,Gridpoint Networks,8366.97,Low
+store_email_047.eml,Facilities,ST-007,2026-10-06,Ironwood Facilities,7124.19,High
+store_email_048.eml,Inventory Shrink,ST-019,2026-09-04,Sentinel Audit Group,2681.78,High
+store_email_049.eml,Equipment Failure,ST-016,2026-09-07,Polar Mechanical,5952.97,Medium
+store_email_050.eml,Food Safety,ST-009,2026-09-17,GreenLeaf Produce,3988.93,Medium
+store_email_051.eml,Vendor Delivery,ST-005,2026-09-27,BluePeak Logistics,4112.31,
+store_email_052.eml,Safety Incident,ST-007,2026-09-30,Sentinel Compliance Group,4065.69,High
+store_email_053.eml,POS/IT Outage,ST-008,2026-10-10,Teller Support Services,1762.43,Medium
+store_email_054.eml,Facilities,ST-007,2026-09-01,Ironwood Facilities,9446.81,High
+store_email_055.eml,Inventory Shrink,ST-020,2026-09-11,Sentinel Audit Group,8288.28,High
+store_email_056.eml,Equipment Failure,ST-002,2026-09-14,Polar Mechanical,10746.47,High
+store_email_057.eml,Food Safety,,2026-09-24,GreenLeaf Produce,,
+store_email_058.eml,Vendor Delivery,ST-016,2026-10-04,BluePeak Logistics,8301.17,High
+store_email_059.eml,Safety Incident,ST-005,2026-10-07,Aegis Compliance Supply,12990.66,Critical
+vendor_notice_020.docx,Inventory Shrink,ST-016,2026-09-18,Sentinel Audit Group,1290.19,High
+vendor_notice_021.docx,Equipment Failure,,2026-09-21,Polar Mechanical,,
+vendor_notice_022.docx,Food Safety,ST-016,2026-10-01,Harbor Dairy Co,781.95,High
+vendor_notice_023.docx,Vendor Delivery,ST-015,2026-10-11,Ridgeline Distribution,6186.53,Medium
+vendor_notice_024.docx,Safety Incident,ST-019,2026-09-02,Sentinel Compliance Group,13861.36,Critical
+vendor_notice_025.docx,POS/IT Outage,ST-018,2026-09-12,Teller Support Services,4983.42,Medium
+vendor_notice_026.docx,Facilities,ST-010,2026-09-15,Anchor Maintenance,15657.58,Medium
+vendor_notice_027.docx,Inventory Shrink,ST-018,2026-09-25,Watchtower Loss Prevention,9573.26,
+vendor_notice_028.docx,Equipment Failure,ST-008,2026-09-28,Vertex Mechanical,12879.84,Critical
+vendor_notice_029.docx,Food Safety,ST-002,2026-10-08,Harbor Dairy Co,3567.33,Critical
+vendor_notice_030.docx,Vendor Delivery,ST-017,2026-09-06,Cascade Beverage,689.65,High
+vendor_notice_031.docx,Safety Incident,ST-011,2026-09-09,Aegis Compliance Supply,13558.85,Medium
+vendor_notice_032.docx,POS/IT Outage,ST-016,2026-09-19,Nexus Retail Systems,8892.11,Medium
+vendor_notice_033.docx,Facilities,,2026-09-22,Ironwood Facilities,,
+vendor_notice_034.docx,Inventory Shrink,ST-010,2026-10-02,Watchtower Loss Prevention,9438.67,Medium
+vendor_notice_035.docx,Equipment Failure,ST-002,2026-10-05,Vertex Mechanical,13322.14,High
+vendor_notice_036.docx,Food Safety,ST-016,2026-09-03,Harbor Dairy Co,723.59,High
+vendor_notice_037.docx,Vendor Delivery,ST-001,2026-09-13,BluePeak Logistics,4826.20,Medium
+vendor_notice_038.docx,Safety Incident,ST-011,2026-09-16,Aegis Compliance Supply,14002.82,High
+vendor_notice_039.docx,POS/IT Outage,ST-006,2026-09-26,Nexus Retail Systems,1853.31,

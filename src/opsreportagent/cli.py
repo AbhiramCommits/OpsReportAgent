@@ -54,6 +54,34 @@ def init_db_command(
         _echo(f"  - {name}")
 
 
+@app.command("ingest")
+def ingest_command(
+    path: str = typer.Option(
+        "data/corpus", "--path", help="Directory (or file) of documents to ingest."
+    ),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Ingest every supported document under --path into the documents table."""
+    from .ingest import ingest_dir
+
+    settings = load_settings()
+    url = database_url or settings.database_url
+    db = get_database(url)
+    db.create_all()
+    report = ingest_dir(path, database_url=url)
+    _echo(f"Ingested from: {path}")
+    for document in report.ingested:
+        _echo(f"  + {document.doc_type:4s} {document.source_path} ({document.char_count} chars)")
+    for duplicate in report.duplicates:
+        _echo(f"  = duplicate skipped: {duplicate}")
+    for skipped_path, reason in report.skipped:
+        _echo(f"  ! skipped {skipped_path}: {reason}")
+    _echo(
+        f"Result: {report.new_count} ingested / {report.duplicate_count} duplicates "
+        f"/ {report.skipped_count} skipped"
+    )
+
+
 @app.command("info")
 def info_command() -> None:
     """Print the effective (secret-redacted) configuration and DB status."""
