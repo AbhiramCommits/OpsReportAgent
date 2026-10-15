@@ -1,0 +1,24 @@
+review_id,created_at,run_id,extraction_id,source_file,doc_type,field_name,old_value,new_value,reviewer,note
+1,2026-10-15T14:32:39.959206+00:00,run-001,10,incident_009.pdf,pdf,category,Equipment Failure,Vendor Delivery,Maria Delgado,Doc describes a short delivery; not equipment
+2,2026-10-15T14:32:40.158672+00:00,run-001,10,incident_009.pdf,pdf,incident_date,,2026-09-27,Maria Delgado,Date stated in truncated write-up
+3,2026-10-15T14:32:40.347778+00:00,run-001,26,store_email_045.eml,eml,category,Equipment Failure,Safety Incident,Maria Delgado,Team member injury mentioned
+4,2026-10-15T14:32:40.538107+00:00,run-001,26,store_email_045.eml,eml,incident_date,,2026-09-23,Maria Delgado,Date from email header
+5,2026-10-15T14:32:40.728058+00:00,run-001,38,store_email_057.eml,eml,category,Equipment Failure,Food Safety,Maria Delgado,Hot-bar holding issue
+6,2026-10-15T14:32:40.930257+00:00,run-001,38,store_email_057.eml,eml,incident_date,,2026-09-24,Maria Delgado,Date from email header
+7,2026-10-15T14:32:41.120443+00:00,run-001,42,vendor_notice_021.docx,docx,incident_date,,2026-09-21,Maria Delgado,Short date in notice
+8,2026-10-15T14:32:41.311339+00:00,run-001,54,vendor_notice_033.docx,docx,category,Equipment Failure,Facilities,Maria Delgado,"Building issue, not equipment"
+9,2026-10-15T14:32:41.500838+00:00,run-001,54,vendor_notice_033.docx,docx,incident_date,,2026-09-22,Maria Delgado,Short date in notice
+10,2026-10-15T14:32:41.699642+00:00,run-001,4,incident_003.pdf,pdf,category,Equipment Failure,Safety Incident,Maria Delgado,"Personal injury, not equipment"
+11,2026-10-15T14:32:41.891508+00:00,run-001,4,incident_003.pdf,pdf,incident_date,,2026-09-23,Maria Delgado,Short date
+12,2026-10-15T14:32:42.081856+00:00,run-001,4,incident_003.pdf,pdf,dollar_impact,,11788.52,Maria Delgado,Impact stated in words
+13,2026-10-15T14:32:42.277466+00:00,run-001,16,incident_015.pdf,pdf,category,Equipment Failure,Food Safety,Maria Delgado,Hot bar temperature concern
+14,2026-10-15T14:32:42.470579+00:00,run-001,16,incident_015.pdf,pdf,incident_date,,2026-09-24,Maria Delgado,Short date
+15,2026-10-15T14:32:42.661369+00:00,run-001,16,incident_015.pdf,pdf,dollar_impact,,3310.84,Maria Delgado,Impact stated in words
+16,2026-10-15T14:32:42.851696+00:00,run-001,32,store_email_051.eml,eml,category,Equipment Failure,Vendor Delivery,Maria Delgado,Load was short
+17,2026-10-15T14:32:43.041865+00:00,run-001,32,store_email_051.eml,eml,incident_date,,2026-09-27,Maria Delgado,Date from email header
+18,2026-10-15T14:32:43.233507+00:00,run-001,32,store_email_051.eml,eml,dollar_impact,,4112.31,Maria Delgado,Impact stated in words
+19,2026-10-15T14:32:43.423514+00:00,run-001,48,vendor_notice_027.docx,docx,category,Equipment Failure,Inventory Shrink,Maria Delgado,Counts do not reconcile
+20,2026-10-15T14:32:43.612584+00:00,run-001,48,vendor_notice_027.docx,docx,incident_date,,2026-09-25,Maria Delgado,Short date
+21,2026-10-15T14:32:43.802079+00:00,run-001,48,vendor_notice_027.docx,docx,dollar_impact,,9573.26,Maria Delgado,Impact stated in words
+22,2026-10-15T14:32:43.991083+00:00,run-001,60,vendor_notice_039.docx,docx,incident_date,,2026-09-26,Maria Delgado,Short date in notice
+23,2026-10-15T14:32:44.190357+00:00,run-001,60,vendor_notice_039.docx,docx,dollar_impact,,1853.31,Maria Delgado,Impact stated in words

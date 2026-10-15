@@ -6,11 +6,13 @@ console script (see ``pyproject.toml``).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
 from . import __version__
 from .config import load_settings
-from .db import get_database, init_db
+from .db import Document, Extraction, get_database, init_db
 
 app = typer.Typer(
     name="opsreport",
@@ -107,6 +109,122 @@ def run_command(
             limit=limit,
         )
     _echo(summary.render())
+
+
+@app.command("score")
+def score_command(
+    run_id: str = typer.Option(..., "--run-id", help="Run to score against the gold set."),
+    database_url: str | None = typer.Option(None, "--database-url"),
+    gold_dir: str | None = typer.Option(None, "--gold-dir", help="Directory holding gold_labels.csv."),
+) -> None:
+    """Score a run against the hand-labelled gold set."""
+    from .scoring import score_run, write_scorecard
+
+    settings = load_settings()
+    if gold_dir:
+        settings.gold_dir = gold_dir
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        card = score_run(run_id, session, settings)
+    csv_path, md_path = write_scorecard(card, settings.reports_dir)
+
+    _echo(f"Scorecard for run {run_id} ({card.n_docs} documents scored)")
+    _echo(card.to_text_table())
+    _echo("")
+    _echo("needs_review flag quality:")
+    _echo(
+        f"  flagged={card.review.flagged} tp={card.review.tp} fp={card.review.fp} "
+        f"fn={card.review.fn} precision={card.review.precision:.3f} "
+        f"recall={card.review.recall:.3f}"
+    )
+    _echo(f"  human corrections applied: {card.corrections} ({', '.join(card.corrected_fields) or 'none'})")
+    _echo("")
+    _echo("category confusion matrix (gold x predicted):")
+    _echo(card.confusion_table())
+    _echo("")
+    _echo(f"wrote {csv_path}")
+    _echo(f"wrote {md_path}")
+
+
+review_app = typer.Typer(help="Human reviewer queue and correction audit log.", no_args_is_help=True)
+app.add_typer(review_app, name="review")
+
+
+@review_app.command("list")
+def review_list_command(
+    run_id: str | None = typer.Option(None, "--run-id", help="Restrict to one run."),
+    all_rows: bool = typer.Option(False, "--all", help="Include non-flagged extractions."),
+    limit: int | None = typer.Option(None, "--limit"),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Show the review queue sorted by confidence ascending."""
+    from .review import list_queue
+
+    settings = load_settings()
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        rows = list_queue(session, run_id, only_flagged=not all_rows, limit=limit)
+        _echo(f"{len(rows)} extraction(s) in the review queue")
+        header = f"{'id':>6}  {'conf':>5}  {'run':<10}  {'category':<18}  {'store':<7}  {'date':<10}  source"
+        _echo(header)
+        _echo("-" * len(header))
+        for row in rows:
+            document = session.get(Document, row.document_id)
+            source = Path(document.source_path).name if document else "?"
+            _echo(
+                f"{row.id:>6}  {row.confidence:>5.2f}  {row.run_id:<10}  "
+                f"{(row.category or '-'):<18}  {(row.store_id or '-'):<7}  "
+                f"{(row.incident_date or '-'):<10}  {source}"
+            )
+
+
+@review_app.command("fix")
+def review_fix_command(
+    extraction_id: int = typer.Option(..., "--extraction-id"),
+    field: str = typer.Option(..., "--field", help=f"One of: {', '.join(Extraction.CORRECTABLE_FIELDS)}"),
+    value: str = typer.Option(..., "--value"),
+    reviewer: str = typer.Option(..., "--reviewer"),
+    note: str | None = typer.Option(None, "--note"),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Correct one field, log an audit row, and re-score the run."""
+    from .review import apply_fix
+
+    settings = load_settings()
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        result = apply_fix(session, extraction_id, field, value, reviewer, note, settings)
+
+    _echo(
+        f"extraction {result.extraction_id} ({result.run_id}): "
+        f"{result.field_name} {result.old_value!r} -> {result.new_value!r} by {result.reviewer}"
+    )
+    if result.score_before and result.score_after:
+        _echo(
+            "macro accuracy: "
+            f"{result.score_before.macro_accuracy:.3f} -> {result.score_after.macro_accuracy:.3f}  "
+            "| category: "
+            f"{result.score_before.category_accuracy:.3f} -> {result.score_after.category_accuracy:.3f}"
+        )
+
+
+@review_app.command("export")
+def review_export_command(
+    out: str = typer.Option("reports/corrections.csv", "--out"),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Export every logged correction to CSV for prompt revision."""
+    from .review import export_corrections
+
+    settings = load_settings()
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        path = export_corrections(session, out)
+    _echo(f"wrote {path}")
 
 
 @app.command("info")
