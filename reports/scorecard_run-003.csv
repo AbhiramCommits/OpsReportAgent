@@ -1,0 +1,8 @@
+field_name,n,exact_match,accuracy
+category,60,56,0.9333
+store_id,60,60,1.0
+incident_date,60,60,1.0
+vendor,60,60,1.0
+dollar_impact,60,60,1.0
+severity,60,60,1.0
+__macro__,60,,0.9889

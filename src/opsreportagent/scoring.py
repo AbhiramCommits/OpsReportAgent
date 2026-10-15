@@ -371,3 +371,107 @@ def main_cli(run_id: str, database_url: str | None = None, settings: Settings | 
         card = score_run(run_id, session, settings)
     paths = write_scorecard(card, settings.reports_dir)
     return card, paths
+
+
+# --------------------------------------------------------------------------
+# Prompt A/B comparison
+# --------------------------------------------------------------------------
+
+
+@dataclass
+class ComparisonResult:
+    run_a: str
+    run_b: str
+    rows: list[dict] = field(default_factory=list)
+    macro_a: float = 0.0
+    macro_b: float = 0.0
+    category_a: float = 0.0
+    category_b: float = 0.0
+    reviews_a: int = 0
+    reviews_b: int = 0
+
+    @property
+    def macro_delta(self) -> float:
+        return self.macro_b - self.macro_a
+
+    def to_markdown(self) -> str:
+        lines = [
+            f"# Prompt A/B — `{self.run_a}` vs `{self.run_b}`",
+            "",
+            f"- run A (`{self.run_a}`): macro **{self.macro_a:.3f}**, "
+            f"category **{self.category_a:.3f}**, human corrections **{self.reviews_a}**",
+            f"- run B (`{self.run_b}`): macro **{self.macro_b:.3f}**, "
+            f"category **{self.category_b:.3f}**, human corrections **{self.reviews_b}**",
+            f"- macro delta (B - A): **{self.macro_delta:+.3f}**",
+            "",
+            "| field | A accuracy | B accuracy | delta | n |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ]
+        for row in self.rows:
+            lines.append(
+                f"| {row['field']} | {row['a']:.3f} | {row['b']:.3f} | "
+                f"{row['delta']:+.3f} | {row['n']} |"
+            )
+        lines.append(
+            f"| **macro** | **{self.macro_a:.3f}** | **{self.macro_b:.3f}** | "
+            f"**{self.macro_delta:+.3f}** | {self.rows[0]['n'] if self.rows else 0} |"
+        )
+        return "\n".join(lines) + "\n"
+
+    def render(self) -> str:
+        header = f"{'field':<16}{'A':>9}{'B':>9}{'delta':>10}"
+        lines = [f"run A = {self.run_a}   run B = {self.run_b}", header, "-" * len(header)]
+        for row in self.rows:
+            lines.append(
+                f"{row['field']:<16}{row['a']:>9.3f}{row['b']:>9.3f}{row['delta']:>+10.3f}"
+            )
+        lines.append("-" * len(header))
+        lines.append(f"{'MACRO':<16}{self.macro_a:>9.3f}{self.macro_b:>9.3f}{self.macro_delta:>+10.3f}")
+        return "\n".join(lines)
+
+
+def compare_runs(
+    run_a: str,
+    run_b: str,
+    session: Session,
+    settings: Settings | None = None,
+    reports_dir: str | Path = "reports",
+) -> ComparisonResult:
+    """Per-field accuracy delta between two runs, written to ``reports/``."""
+    settings = settings or load_settings()
+    card_a = score_run(run_a, session, settings, persist=False)
+    card_b = score_run(run_b, session, settings, persist=False)
+
+    rows = []
+    for name in GOLD_FIELDS:
+        fa = card_a.fields.get(name)
+        fb = card_b.fields.get(name)
+        if fa is None or fb is None:
+            continue
+        rows.append(
+            {
+                "field": name,
+                "a": fa.accuracy,
+                "b": fb.accuracy,
+                "delta": fb.accuracy - fa.accuracy,
+                "n": fb.n,
+            }
+        )
+
+    result = ComparisonResult(
+        run_a=run_a,
+        run_b=run_b,
+        rows=rows,
+        macro_a=card_a.macro_accuracy,
+        macro_b=card_b.macro_accuracy,
+        category_a=card_a.category_accuracy,
+        category_b=card_b.category_accuracy,
+        reviews_a=card_a.corrections,
+        reviews_b=card_b.corrections,
+    )
+
+    reports_dir = Path(reports_dir)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    path = reports_dir / f"prompt_ab_{run_a}_vs_{run_b}.md"
+    path.write_text(result.to_markdown(), encoding="utf-8")
+    return result

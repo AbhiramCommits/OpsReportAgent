@@ -87,7 +87,9 @@ def ingest_command(
 @app.command("run")
 def run_command(
     run_id: str = typer.Option(..., "--run-id", help="Unique identifier for this extraction run."),
-    threshold: float = typer.Option(0.75, "--threshold", help="Confidence threshold for review."),
+    threshold: float | None = typer.Option(
+        None, "--threshold", help="Confidence threshold (defaults to CONFIDENCE_THRESHOLD)."
+    ),
     prompt_version: str = typer.Option("v1", "--prompt-version", help="extract prompt version."),
     limit: int | None = typer.Option(None, "--limit", help="Only process the first N documents."),
     database_url: str | None = typer.Option(None, "--database-url"),
@@ -253,7 +255,9 @@ def report_command(
 def schedule_command(
     weekly: bool = typer.Option(False, "--weekly", help="Run the full weekly job."),
     run_id: str | None = typer.Option(None, "--run-id", help="Defaults to run-YYYYMMDD."),
-    threshold: float = typer.Option(0.75, "--threshold"),
+    threshold: float | None = typer.Option(
+        None, "--threshold", help="Confidence threshold (defaults to CONFIDENCE_THRESHOLD)."
+    ),
     prompt_version: str = typer.Option("v1", "--prompt-version"),
     path: str | None = typer.Option(None, "--path", help="Corpus directory."),
     weeks: int = typer.Option(6, "--weeks"),
@@ -276,6 +280,25 @@ def schedule_command(
         weeks=weeks,
     )
     _echo(result.render())
+
+
+@app.command("compare-runs")
+def compare_runs_command(
+    a: str = typer.Option(..., "--a", help="Baseline run id."),
+    b: str = typer.Option(..., "--b", help="Comparison run id."),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Print a per-field accuracy delta between two runs."""
+    from .scoring import compare_runs
+
+    settings = load_settings()
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        result = compare_runs(a, b, session, settings, settings.reports_dir)
+    _echo(result.render())
+    _echo("")
+    _echo(f"wrote {Path(settings.reports_dir) / f'prompt_ab_{a}_vs_{b}.md'}")
 
 
 @app.command("info")

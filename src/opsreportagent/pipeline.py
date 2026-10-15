@@ -262,7 +262,7 @@ def make_context(
     session: Session,
     settings: Settings,
     run_id: str,
-    threshold: float = DEFAULT_THRESHOLD,
+    threshold: float | None = None,
     prompt_version: str = "v1",
     llm: Any = None,
 ) -> PipelineContext:
@@ -271,7 +271,7 @@ def make_context(
         session=session,
         run_id=run_id,
         prompt_version=prompt_version,
-        threshold=threshold,
+        threshold=settings.confidence_threshold if threshold is None else threshold,
         llm=llm if llm is not None else get_llm(settings),
         summarize_prompt=load_prompt("summarize", "v1"),
         classify_prompt=load_prompt("classify", "v1"),
@@ -283,13 +283,15 @@ def run_batch(
     session: Session,
     settings: Settings,
     run_id: str,
-    threshold: float = DEFAULT_THRESHOLD,
+    threshold: float | None = None,
     prompt_version: str = "v1",
     limit: int | None = None,
     llm: Any = None,
 ) -> RunSummary:
     """Run the extraction graph over all not-yet-extracted documents."""
     started = datetime.now()
+    if threshold is None:
+        threshold = settings.confidence_threshold
     documents = unextracted_documents(session, run_id)
     if limit is not None:
         documents = documents[:limit]

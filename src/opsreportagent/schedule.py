@@ -14,7 +14,7 @@ from pathlib import Path
 from .config import Settings, load_settings
 from .db import get_database
 from .ingest import ingest_dir
-from .pipeline import DEFAULT_THRESHOLD, run_batch
+from .pipeline import run_batch
 from .report import build_report
 from .scoring import score_run, write_scorecard
 
@@ -61,7 +61,7 @@ def default_run_id(when: date | None = None) -> str:
 def run_weekly(
     run_id: str | None = None,
     settings: Settings | None = None,
-    threshold: float = DEFAULT_THRESHOLD,
+    threshold: float | None = None,
     prompt_version: str = "v1",
     corpus_path: str | None = None,
     weeks: int = 6,

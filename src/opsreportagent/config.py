@@ -72,6 +72,11 @@ class Settings:
             database_url=os.environ.get("DATABASE_URL", "") or DEFAULT_DATABASE_URL,
             confidence_threshold=float(threshold_raw),
             prompt_version=os.environ.get("PROMPT_VERSION", "v1") or "v1",
+            corpus_dir=os.environ.get("CORPUS_DIR", "data/corpus") or "data/corpus",
+            gold_dir=os.environ.get("GOLD_DIR", "data/gold") or "data/gold",
+            reports_dir=os.environ.get("REPORTS_DIR", "reports") or "reports",
+            templates_dir=os.environ.get("TEMPLATES_DIR", "")
+            or str(PROJECT_ROOT / "templates"),
         )
 
     # ----- helpers ----------------------------------------------------------

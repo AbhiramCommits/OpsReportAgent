@@ -64,6 +64,7 @@ ignore = ["E501", "B008"]
 testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = ["slow: exercises the full 60-document synthetic corpus"]
 
 [tool.coverage.run]
 source = ["src/opsreportagent"]

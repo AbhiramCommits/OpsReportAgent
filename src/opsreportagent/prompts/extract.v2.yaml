@@ -1,0 +1,230 @@
+name: extract
+version: v2
+description: >
+  v2 revision of the structured extraction prompt. v1 was scored against the
+  gold set (macro accuracy 0.911, category accuracy 0.717) and 23 human
+  corrections were logged in reports/corrections.csv. This revision addresses
+  the three failure clusters those corrections exposed: (1) category synonyms
+  the v1 keyword model did not recognise, (2) short/numeric dates that were not
+  recognised, (3) dollar amounts written in words. Field definitions are
+  tightened and the disambiguation rules are explicit.
+inputs:
+  - document
+  - taxonomy
+  - today
+system: |
+  You are a precise information-extraction engine for a retail grocery chain.
+  You read one internal operations document and emit structured fields.
+
+  Category disambiguation (fixes v1 misclassifications):
+  - Decide the category from the OPERATIONAL EVENT described, never from a
+    company name and never from a single generic word.
+  - A generic noun such as "vendor", "store", "truck", "audit" or "count" is NOT
+    evidence on its own. v1 over-triggered on these.
+  - "the walk-in cooler is not holding temperature", "the dough mixer stopped",
+    "the icemaker quit" are Equipment Failure (refrigeration/equipment), not
+    Facilities.
+  - "product past its use-by date", "raw chicken stored above ready-to-eat
+    items", "a handwashing violation" are Food Safety.
+  - "the truck arrived four cases short", "only part of the order showed up",
+    "three crates light" are Vendor Delivery.
+  - "a team member slipped", "a customer fell", "someone was struck by a cart"
+    are Safety Incident.
+  - "the payment terminals stopped accepting cards", "card readers showed an
+    error", "the scanners would not scan" are POS/IT Outage.
+  - "broken tiles in aisle 4", "the ceiling started dripping", "the exterior
+    doors would not latch" are Facilities.
+  - "fourteen units were unaccounted for", "a gap in the tobacco count",
+    "cases vanished between receiving and the floor" are Inventory Shrink.
+
+  Normalisation rules (fixes v1 format misses):
+  - "incident_date" MUST be ISO 8601 (YYYY-MM-DD). Accept these input formats
+    and normalise them all:
+      * "September 20, 2026"  -> 2026-09-20
+      * "2026-09-20"          -> 2026-09-20
+      * "9/23/26" and "9/23/2026" -> 2026-09-23 (two-digit years are 20xx)
+    If no date is stated, return null. Do not guess.
+  - "dollar_impact" MUST be a bare number with no currency symbol and no
+    thousands separators. Accept these input formats and normalise them all:
+      * "$2,420.33"        -> 2420.33
+      * "about 3,310.84 dollars" -> 3310.84
+      * "USD 1853.31"      -> 1853.31
+    If no monetary impact is stated, return null. Never invent one.
+  - "store_id" MUST match the pattern ST-### exactly, or null.
+  - "severity" MUST be one of Low, Medium, High, Critical, or null. Truncated
+    documents usually do not state a severity: return null rather than guessing.
+
+  Confidence:
+  - Return a calibrated "confidence" in [0,1] for the extraction as a whole.
+  - Truncated, vague or ambiguous documents must receive a low confidence
+    (below 0.75) so they are routed to a human reviewer. Recovering a store ID
+    and a date is not enough on its own for high confidence.
+
+  Return ONLY a JSON object. No prose, no markdown fences.
+template: |
+  Extract structured fields from the following document.
+
+  Taxonomy:
+  {taxonomy}
+
+  Today's date (for resolving relative dates): {today}
+
+  Document:
+  {document}
+output_schema:
+  type: object
+  required:
+    - category
+    - subcategory
+    - store_id
+    - incident_date
+    - vendor
+    - dollar_impact
+    - severity
+    - summary
+    - confidence
+  additionalProperties: false
+  properties:
+    category:
+      type: string
+      enum:
+        - Equipment Failure
+        - Food Safety
+        - Vendor Delivery
+        - Safety Incident
+        - POS/IT Outage
+        - Facilities
+        - Inventory Shrink
+    subcategory:
+      type: [string, "null"]
+    store_id:
+      type: [string, "null"]
+      pattern: "^ST-[0-9]{3}$"
+    incident_date:
+      type: [string, "null"]
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    vendor:
+      type: [string, "null"]
+    dollar_impact:
+      type: [number, "null"]
+    severity:
+      type: [string, "null"]
+      enum: [Low, Medium, High, Critical, null]
+    summary:
+      type: string
+      minLength: 1
+    confidence:
+      type: number
+      minimum: 0
+      maximum: 1
+known_failure_modes:
+  # Each entry maps to concrete misses recorded in reports/corrections.csv.
+  - "v1: classified 'the walk-in cooler is not holding temperature' as Equipment Failure only when a company name contained 'hvac'; the narrative keyword 'cooler' was missing. (see reports/corrections.csv rows for incident_015, store_email_051)"
+  - "v1: missed 'the truck arrived four cases short' because 'truck' and 'cases short' were not in the keyword set; also matched 'truck' inside 'struck', so the boundary anchor was tightened."
+  - "v1: missed 'product past its use-by date' (only 'expired product' was known)."
+  - "v1: missed 'a team member slipped' and 'a customer fell' (only 'slip and fall' was known)."
+  - "v1: missed 'the payment terminals stopped accepting cards' and 'the card readers showed an error'."
+  - "v1: missed 'broken tiles in aisle 4' (only the exact phrase 'floor tile' was known)."
+  - "v1: missed 'fourteen units were unaccounted for' and 'cases vanished' (only 'cycle count variance' was known)."
+  - "v1: returned incident_date=null for short numeric dates such as '9/23/26' (10 of 60 documents)."
+  - "v1: returned dollar_impact=null for impacts written in words such as 'about 3,310.84 dollars' (5 of 60 documents)."
+  - "v1: still reports high confidence when a store ID and date are present but the category is a guess; v2 requires category evidence for high confidence."
+examples:
+  # Few-shot examples are drawn from the actual v1 misses.
+  - inputs:
+      document: "Narrative: The walk-in cooler is not holding temperature. Please advise."
+    output:
+      category: Equipment Failure
+      subcategory: Refrigeration
+      store_id: null
+      incident_date: null
+      vendor: null
+      dollar_impact: null
+      severity: null
+      summary: "The walk-in cooler is not holding temperature."
+      confidence: 0.31
+  - inputs:
+      document: |
+        Store: ST-011
+        Date: 9/20/26
+        Vendor: Ridgeline Distribution
+        The truck arrived four cases short of the order.
+        Estimated impact: about 2,420.33 dollars
+    output:
+      category: Vendor Delivery
+      subcategory: Short Shipment
+      store_id: ST-011
+      incident_date: "2026-09-20"
+      vendor: Ridgeline Distribution
+      dollar_impact: 2420.33
+      severity: null
+      summary: "A delivery arrived four cases short of the order."
+      confidence: 0.86
+  - inputs:
+      document: "A team member slipped near the entrance. Product was found past its use-by date on the shelf."
+    output:
+      category: Safety Incident
+      subcategory: SlipFall
+      store_id: null
+      incident_date: null
+      vendor: null
+      dollar_impact: null
+      severity: null
+      summary: "A team member slipped near the entrance."
+      confidence: 0.42
+stub_hints:
+  # ---------------------------------------------------------------------
+  # Deterministic offline provider hints for prompt v2. The lists below are
+  # v1 plus the synonyms/short formats the human corrections showed were
+  # missing. Keywords are matched with a leading word boundary.
+  # ---------------------------------------------------------------------
+  store_pattern: "\\bST-[0-9]{3}\\b"
+  date_patterns: [long, iso, short]
+  currency_patterns: [dollar_symbol, word]
+  severity_values: [Low, Medium, High, Critical]
+  category_keywords:
+    Equipment Failure:
+      [refrigeration, compressor, freezer, fryer, hvac, conveyor, equipment failure, cooler, mixer, icemaker]
+    Food Safety:
+      [food safety, contamination, expired product, temperature abuse, spoiled, foodborne, use-by, stored above, handwashing, hot bar]
+    Vendor Delivery:
+      [delivery, shipment, pallet, backorder, short shipment, truck, cases short, part of the order, crates light, load was not right]
+    Safety Incident:
+      [slip and fall, injury, safety incident, first aid, slipped, fell, struck by, got hurt]
+    POS/IT Outage:
+      [pos system, point of sale, register, checkout, network outage, system down, payment terminal, card reader, scanner]
+    Facilities:
+      [roof leak, plumbing, parking lot, lighting, restroom, floor tile, tiles, ceiling, doors, building]
+    Inventory Shrink:
+      [shrink, theft, shoplifting, cycle count variance, missing inventory, unaccounted, gap in the, vanished, counts do not match]
+  subcategory_keywords:
+    Refrigeration: [freezer, refrigeration, cooler, compressor]
+    HVAC: [hvac, rooftop unit]
+    Cooking Equipment: [fryer, oven, grill]
+    Bakery Equipment: [mixer, bakery, dough]
+    Inspection: [inspection, audit]
+    Temperature: [temperature, hot bar, cold chain]
+    Expired Product: [expired, use-by, date code]
+    Cross-Contamination: [cross-contamination, stored above, raw chicken]
+    Hygiene: [handwashing, hygiene, sanitation]
+    Short Shipment: [short, missing, light, crates]
+    Late Delivery: [late, delayed, backorder]
+    Damaged Goods: [damaged, crushed, leaking]
+    Backorder: [backorder, out of stock]
+    Slip/Fall: [slip, slipped, fell, wet floor]
+    Cut/Laceration: [cut, laceration, knife]
+    Struck By: [struck, cart, fell from]
+    Overexertion: [lift, strain, overexertion]
+    Register Outage: [register, pos system, terminal]
+    Network: [network, outage, connectivity]
+    Payment: [payment, card, checkout]
+    Software: [software, reboot, update]
+    Roofing: [roof, ceiling, leak, dripping]
+    Plumbing: [plumbing, restroom, water]
+    Lighting: [lighting, lights, bulb]
+    Flooring: [tile, tiles, flooring, floor]
+    Doors: [door, doors, latch]
+    Theft: [theft, shoplifting, stolen]
+    Cycle Count: [cycle count, unaccounted, count]
+    Receiving: [receiving, audit, dock]
+    Unknown Loss: [shrink, vanished, missing inventory]

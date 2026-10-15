@@ -190,6 +190,7 @@ def ingest_file(path: Path, session: Session) -> Document | None:
         sha256=digest,
     )
     session.add(document)
+    session.flush()
     return document
 
 
