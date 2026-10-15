@@ -1,0 +1,174 @@
+name: extract
+version: v1
+description: >
+  Extract structured fields (category, store, date, vendor, dollar impact,
+  severity) plus a short summary from a single retail store operations document,
+  with a calibrated confidence score used to route uncertain extractions to a
+  human reviewer.
+inputs:
+  - document
+  - taxonomy
+  - today
+system: |
+  You are a precise information-extraction engine for a retail grocery chain.
+  You read one internal operations document and emit structured fields.
+
+  Normalisation rules:
+  - "incident_date" MUST be ISO 8601 (YYYY-MM-DD). If you cannot determine the
+    date, return null. Do not guess.
+  - "dollar_impact" MUST be a bare number (no currency symbol, no thousands
+    separators). If no monetary impact is stated, return null.
+  - "store_id" MUST match the pattern ST-### exactly, or null.
+  - "severity" MUST be one of Low, Medium, High, Critical, or null.
+  - Use null for any field the document does not state. Never invent values.
+
+  Confidence:
+  - Return a calibrated "confidence" in [0,1] for the extraction as a whole.
+  - Truncated, vague or ambiguous documents must receive a low confidence
+    (below 0.75) so they are routed to a human reviewer.
+
+  Return ONLY a JSON object. No prose, no markdown fences.
+template: |
+  Extract structured fields from the following document.
+
+  Taxonomy:
+  {taxonomy}
+
+  Today's date (for resolving relative dates): {today}
+
+  Document:
+  {document}
+output_schema:
+  type: object
+  required:
+    - category
+    - subcategory
+    - store_id
+    - incident_date
+    - vendor
+    - dollar_impact
+    - severity
+    - summary
+    - confidence
+  additionalProperties: false
+  properties:
+    category:
+      type: string
+      enum:
+        - Equipment Failure
+        - Food Safety
+        - Vendor Delivery
+        - Safety Incident
+        - POS/IT Outage
+        - Facilities
+        - Inventory Shrink
+    subcategory:
+      type: [string, "null"]
+    store_id:
+      type: [string, "null"]
+      pattern: "^ST-[0-9]{3}$"
+    incident_date:
+      type: [string, "null"]
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    vendor:
+      type: [string, "null"]
+    dollar_impact:
+      type: [number, "null"]
+    severity:
+      type: [string, "null"]
+      enum: [Low, Medium, High, Critical, null]
+    summary:
+      type: string
+      minLength: 1
+    confidence:
+      type: number
+      minimum: 0
+      maximum: 1
+known_failure_modes:
+  - "Emitting dates in a local format instead of ISO 8601."
+  - "Emitting currency strings such as '$2,420.33' instead of the number 2420.33."
+  - "Inventing a dollar impact for a truncated document that states none."
+  - "Treating the generic word 'vendor' as evidence of a Vendor Delivery document."
+  - "Returning a category outside the taxonomy enum."
+  - "Reporting high confidence for a vague document (should be < 0.75)."
+examples:
+  - inputs:
+      document: |
+        Reference: INC-0002
+        Store: ST-011
+        Date: September 20, 2026
+        Vendor: Ridgeline Distribution
+        Severity: High
+        The delivery arrived two pallets short of the order.
+        Estimated impact: $2,420.33
+    output:
+      category: Vendor Delivery
+      subcategory: Short Shipment
+      store_id: ST-011
+      incident_date: "2026-09-20"
+      vendor: Ridgeline Distribution
+      dollar_impact: 2420.33
+      severity: High
+      summary: "A delivery to ST-011 arrived two pallets short of the order."
+      confidence: 0.93
+  - inputs:
+      document: "Not sure what happened. Please advise on next steps as soon as possible."
+    output:
+      category: Equipment Failure
+      subcategory: null
+      store_id: null
+      incident_date: null
+      vendor: null
+      dollar_impact: null
+      severity: null
+      summary: "The document is too vague to extract specifics."
+      confidence: 0.12
+stub_hints:
+  # ---------------------------------------------------------------------
+  # Deterministic offline provider hints. The stub provider merges these
+  # with the document text to produce schema-valid JSON. Prompt v2 extends
+  # the keyword lists and enables the extra date/currency patterns.
+  # ---------------------------------------------------------------------
+  store_pattern: "\\bST-[0-9]{3}\\b"
+  date_patterns: [long, iso]
+  currency_patterns: [dollar_symbol]
+  severity_values: [Low, Medium, High, Critical]
+  category_keywords:
+    Equipment Failure: [refrigeration, compressor, freezer, fryer, hvac, conveyor, equipment failure]
+    Food Safety: [food safety, contamination, expired product, temperature abuse, spoiled, foodborne]
+    Vendor Delivery: [delivery, shipment, pallet, backorder, short shipment]
+    Safety Incident: [slip and fall, injury, safety incident, first aid]
+    POS/IT Outage: [pos system, point of sale, register, checkout, network outage, system down]
+    Facilities: [roof leak, plumbing, parking lot, lighting, restroom, floor tile]
+    Inventory Shrink: [shrink, theft, shoplifting, cycle count variance, missing inventory]
+  subcategory_keywords:
+    Refrigeration: [freezer, refrigeration, cooler, compressor]
+    HVAC: [hvac, rooftop unit]
+    Cooking Equipment: [fryer, oven, grill]
+    Bakery Equipment: [mixer, bakery, dough]
+    Inspection: [inspection, audit]
+    Temperature: [temperature, hot bar, cold chain]
+    Expired Product: [expired, use-by, date code]
+    Cross-Contamination: [cross-contamination, stored above, raw chicken]
+    Hygiene: [handwashing, hygiene, sanitation]
+    Short Shipment: [short, missing, light, crates]
+    Late Delivery: [late, delayed, backorder]
+    Damaged Goods: [damaged, crushed, leaking]
+    Backorder: [backorder, out of stock]
+    SlipFall: [slip, slipped, fell, wet floor]
+    CutLaceration: [cut, laceration, knife]
+    StruckBy: [struck, cart, fell from]
+    Overexertion: [lift, strain, overexertion]
+    RegisterOutage: [register, pos system, terminal]
+    Network: [network, outage, connectivity]
+    Payment: [payment, card, checkout]
+    Software: [software, reboot, update]
+    Roofing: [roof, ceiling, leak, dripping]
+    Plumbing: [plumbing, restroom, water]
+    Lighting: [lighting, lights, bulb]
+    Flooring: [tile, flooring, floor]
+    Doors: [door, doors, latch]
+    Theft: [theft, shoplifting, stolen]
+    Cycle Count: [cycle count, unaccounted, count]
+    Receiving: [receiving, audit, dock]
+    Unknown Loss: [shrink, vanished, missing inventory]

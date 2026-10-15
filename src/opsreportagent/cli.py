@@ -82,6 +82,33 @@ def ingest_command(
     )
 
 
+@app.command("run")
+def run_command(
+    run_id: str = typer.Option(..., "--run-id", help="Unique identifier for this extraction run."),
+    threshold: float = typer.Option(0.75, "--threshold", help="Confidence threshold for review."),
+    prompt_version: str = typer.Option("v1", "--prompt-version", help="extract prompt version."),
+    limit: int | None = typer.Option(None, "--limit", help="Only process the first N documents."),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Run the LangGraph extraction pipeline over all un-extracted documents."""
+    from .pipeline import run_batch
+
+    settings = load_settings()
+    url = database_url or settings.database_url
+    db = get_database(url)
+    db.create_all()
+    with db.session_scope() as session:
+        summary = run_batch(
+            session,
+            settings,
+            run_id=run_id,
+            threshold=threshold,
+            prompt_version=prompt_version,
+            limit=limit,
+        )
+    _echo(summary.render())
+
+
 @app.command("info")
 def info_command() -> None:
     """Print the effective (secret-redacted) configuration and DB status."""

@@ -1,0 +1,85 @@
+name: classify
+version: v1
+description: >
+  Classify a retail store operations document into a single category (and an
+  optional subcategory) from the fixed ops taxonomy, with a calibrated
+  confidence score.
+inputs:
+  - document
+  - taxonomy
+system: |
+  You are a retail operations taxonomist. Assign each document to exactly ONE
+  category from the taxonomy supplied by the user.
+
+  Rules:
+  - The category MUST be one of the taxonomy values verbatim.
+  - Base the decision only on evidence in the document text.
+  - If the document is too vague to classify confidently, still choose the single
+    most likely category but return a low confidence.
+  - Return ONLY a JSON object. No prose, no markdown fences.
+template: |
+  Classify the following document.
+
+  Taxonomy:
+  {taxonomy}
+
+  Document:
+  {document}
+
+  Return a JSON object with:
+  - "category": one taxonomy value, verbatim.
+  - "subcategory": optional short sub-label, or null.
+  - "confidence": number in [0,1] reflecting how certain you are.
+  - "rationale": one short sentence citing the evidence.
+output_schema:
+  type: object
+  required: [category, subcategory, confidence, rationale]
+  additionalProperties: false
+  properties:
+    category:
+      type: string
+      enum:
+        - Equipment Failure
+        - Food Safety
+        - Vendor Delivery
+        - Safety Incident
+        - POS/IT Outage
+        - Facilities
+        - Inventory Shrink
+    subcategory:
+      type: [string, "null"]
+    confidence:
+      type: number
+      minimum: 0
+      maximum: 1
+    rationale:
+      type: string
+known_failure_modes:
+  - "Choosing a category from a generic word (e.g. 'vendor') that appears in an unrelated document."
+  - "Returning a category outside the taxonomy enum."
+  - "Confidently classifying a truncated document instead of returning low confidence."
+examples:
+  - inputs:
+      document: "The walk-in freezer compressor failed overnight and product is thawing."
+    output:
+      category: Equipment Failure
+      subcategory: Refrigeration
+      confidence: 0.91
+      rationale: "The document describes a failed refrigeration compressor."
+  - inputs:
+      document: "Order came in three crates light this morning."
+    output:
+      category: Vendor Delivery
+      subcategory: Short Shipment
+      confidence: 0.55
+      rationale: "Phrases like 'crates light' indicate a short shipment, but wording is informal."
+stub_hints:
+  # Base keyword set. Prompt v2 extends this list with the synonyms v1 misses.
+  category_keywords:
+    Equipment Failure: [refrigeration, compressor, freezer, fryer, hvac, conveyor, equipment failure]
+    Food Safety: [food safety, contamination, expired product, temperature abuse, spoiled, foodborne]
+    Vendor Delivery: [delivery, shipment, pallet, backorder, short shipment]
+    Safety Incident: [slip and fall, injury, safety incident, first aid]
+    POS/IT Outage: [pos system, point of sale, register, checkout, network outage, system down]
+    Facilities: [roof leak, plumbing, parking lot, lighting, restroom, floor tile]
+    Inventory Shrink: [shrink, theft, shoplifting, cycle count variance, missing inventory]
