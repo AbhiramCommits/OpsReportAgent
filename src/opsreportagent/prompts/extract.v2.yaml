@@ -118,17 +118,20 @@ output_schema:
       minimum: 0
       maximum: 1
 known_failure_modes:
-  # Each entry maps to concrete misses recorded in reports/corrections.csv.
-  - "v1: classified 'the walk-in cooler is not holding temperature' as Equipment Failure only when a company name contained 'hvac'; the narrative keyword 'cooler' was missing. (see reports/corrections.csv rows for incident_015, store_email_051)"
-  - "v1: missed 'the truck arrived four cases short' because 'truck' and 'cases short' were not in the keyword set; also matched 'truck' inside 'struck', so the boundary anchor was tightened."
-  - "v1: missed 'product past its use-by date' (only 'expired product' was known)."
-  - "v1: missed 'a team member slipped' and 'a customer fell' (only 'slip and fall' was known)."
+  # Each entry maps to a concrete miss observed in the v1 scorecard
+  # (reports/scorecard_run-002.md) and/or the human corrections log
+  # (reports/corrections.csv).
+  - "v1: the truncated documents gave the category away only in weak phrases that were not keywords - 'someone got hurt' (incident_003.pdf), 'something on the hot bar looked wrong' (incident_015.pdf), 'the counts do not match' (vendor_notice_027.docx), 'the load was not right' (store_email_051.eml). All four appear in reports/corrections.csv."
+  - "v1: had no keyword for the nouns 'cooler', 'mixer' or 'icemaker', so Equipment Failure documents built on those words (for example vendor_notice_028.docx, 'the dough mixer stopped mid-batch') were only ever labelled correctly by the fallback guess, not on evidence."
+  - "v1: missed 'the truck arrived four cases short' because 'truck' and 'cases short' were not in the keyword set. Adding 'truck' also exposed a boundary bug: the substring 'truck' matched inside 'struck', so keyword matching now requires a leading word boundary."
+  - "v1: missed 'product past its use-by date' and 'a handwashing violation' (only 'expired product' and 'contamination' were known)."
+  - "v1: missed 'a team member slipped' and 'a customer fell' (only the exact phrase 'slip and fall' was known)."
   - "v1: missed 'the payment terminals stopped accepting cards' and 'the card readers showed an error'."
   - "v1: missed 'broken tiles in aisle 4' (only the exact phrase 'floor tile' was known)."
   - "v1: missed 'fourteen units were unaccounted for' and 'cases vanished' (only 'cycle count variance' was known)."
-  - "v1: returned incident_date=null for short numeric dates such as '9/23/26' (10 of 60 documents)."
-  - "v1: returned dollar_impact=null for impacts written in words such as 'about 3,310.84 dollars' (5 of 60 documents)."
-  - "v1: still reports high confidence when a store ID and date are present but the category is a guess; v2 requires category evidence for high confidence."
+  - "v1: returned incident_date=null for short numeric dates such as '9/23/26' - 10 of 60 documents, field accuracy 0.833."
+  - "v1: returned dollar_impact=null for impacts written in words such as 'about 3,310.84 dollars' - 5 of 60 documents, field accuracy 0.917."
+  - "v1: reported high confidence for documents where the category was only a fallback guess; v2 requires category evidence for high confidence."
 examples:
   # Few-shot examples are drawn from the actual v1 misses.
   - inputs:
