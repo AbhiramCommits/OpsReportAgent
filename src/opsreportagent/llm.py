@@ -306,6 +306,8 @@ class StubLLM(BaseChatModel):
                 "summary": analysis.summary,
                 "confidence": analysis.confidence,
             }
+        if prompt.name == "exec_summary":
+            return _exec_summary_from_stats(inputs, effective_hints)
         raise ValueError(f"StubLLM has no handler for prompt {prompt.ref!r}")
 
     # -- LangChain chat interface -----------------------------------------
@@ -341,6 +343,80 @@ def _fallback_category(hints: dict) -> str:
     if keywords:
         return next(iter(keywords))
     return "Equipment Failure"
+
+
+def _fmt_money(value) -> str:
+    try:
+        return f"{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def _exec_summary_from_stats(inputs: dict, hints: dict) -> dict:
+    """Render an executive summary purely from the supplied statistics JSON."""
+    stats = inputs.get("stats", {})
+    if isinstance(stats, str):
+        try:
+            stats = json.loads(stats)
+        except json.JSONDecodeError:  # pragma: no cover - defensive
+            stats = {}
+    if not isinstance(stats, dict):  # pragma: no cover - defensive
+        stats = {}
+
+    total_docs = stats.get("total_documents", 0)
+    weeks = stats.get("weeks", 0)
+    total_dollar = stats.get("total_dollar_impact", 0.0)
+    flagged = stats.get("flagged_for_review", 0)
+    period = stats.get("period", "")
+    top_category = stats.get("top_category") or {}
+    top_vendor = stats.get("top_vendor") or {}
+    top_store = stats.get("top_store") or {}
+    severity_counts = stats.get("severity_counts") or {}
+
+    sentences = []
+    sentences.append(
+        f"OpsReportAgent processed {total_docs} operations documents across {weeks} weeks"
+        + (f" ({period})" if period else "")
+        + f", with a total estimated dollar impact of {_fmt_money(total_dollar)}."
+    )
+    if top_category:
+        sentences.append(
+            f"The highest-volume category was {top_category.get('name')} with "
+            f"{top_category.get('count')} incidents and "
+            f"{_fmt_money(top_category.get('dollar'))} of estimated impact."
+        )
+    if top_store:
+        sentences.append(
+            f"Store {top_store.get('id')} carried the largest single-store impact at "
+            f"{_fmt_money(top_store.get('dollar'))}."
+        )
+    if severity_counts:
+        ranked = sorted(severity_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+        sentences.append(
+            "Severity mix: "
+            + ", ".join(f"{name} {count}" for name, count in ranked)
+            + "."
+        )
+    sentences.append(
+        f"{flagged} extraction(s) fell below the confidence threshold and were routed "
+        f"to the human review queue."
+    )
+
+    highlights = [f"{total_docs} documents processed over {weeks} weeks"]
+    if top_category:
+        highlights.append(
+            f"{top_category.get('name')}: {top_category.get('count')} incidents, "
+            f"{_fmt_money(top_category.get('dollar'))} impact"
+        )
+    if top_vendor:
+        highlights.append(f"Top vendor by volume: {top_vendor.get('name')} ({top_vendor.get('count')} documents)")
+    if top_store:
+        highlights.append(f"Highest-impact store: {top_store.get('id')} ({_fmt_money(top_store.get('dollar'))})")
+    highlights.append(f"{_fmt_money(total_dollar)} total estimated impact")
+    highlights.append(f"{flagged} extraction(s) flagged for human review")
+
+    limit = int(hints.get("max_highlights", 6) or 6)
+    return {"summary": " ".join(sentences), "highlights": highlights[:limit]}
 
 
 # --------------------------------------------------------------------------

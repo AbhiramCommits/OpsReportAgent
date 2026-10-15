@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weekly Operations Rollup — {{ run_id }}</title>
+  <style>
+    :root { --ink:#1c2733; --muted:#5b6b7c; --line:#d7dee6; --accent:#2f6fb2; }
+    body { margin:0; background:#f4f6f9; color:var(--ink);
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+    .wrap { max-width:960px; margin:0 auto; padding:32px 20px 64px; }
+    header { border-bottom:3px solid var(--accent); padding-bottom:12px; margin-bottom:24px; }
+    h1 { font-size:26px; margin:0 0 4px; }
+    h2 { font-size:19px; margin-top:36px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+    h3 { font-size:15px; margin-top:24px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .meta { color:var(--muted); font-size:13px; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:16px 0; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+    .card .k { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .card .v { font-size:22px; font-weight:700; margin-top:4px; }
+    .summary { background:#fff; border-left:4px solid var(--accent); padding:16px 18px; border-radius:6px; }
+    ul.highlights { margin:12px 0 0; padding-left:20px; }
+    table { border-collapse:collapse; width:100%; background:#fff; font-size:14px; }
+    th, td { border:1px solid var(--line); padding:6px 10px; text-align:left; }
+    th { background:#eef2f7; }
+    td.num, th.num { text-align:right; }
+    img { max-width:100%; border:1px solid var(--line); border-radius:6px; background:#fff; }
+    pre { background:#0f1b26; color:#dbe6f0; padding:14px; border-radius:6px; overflow:auto; font-size:12px; }
+    .mermaid { background:#fff; border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; }
+  </style>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true });
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Weekly Operations Rollup — <code>{{ run_id }}</code></h1>
+    <div class="meta">
+      Generated {{ generated_at }} · {{ weeks }}-week window{% if stats.period %} · {{ stats.period }}{% endif %}
+    </div>
+  </header>
+
+  <h2>Executive summary</h2>
+  <div class="summary">{{ summary }}</div>
+  {% if highlights %}
+  <ul class="highlights">
+    {% for item in highlights %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <h2>Headline metrics</h2>
+  <div class="cards">
+    <div class="card"><div class="k">documents processed</div><div class="v">{{ stats.total_documents }}</div></div>
+    <div class="card"><div class="k">total estimated impact</div><div class="v">${{ stats.total_dollar_impact | money }}</div></div>
+    <div class="card"><div class="k">flagged for review</div><div class="v">{{ stats.flagged_for_review }}</div></div>
+    <div class="card"><div class="k">review rate</div><div class="v">{{ "%.1f%%" | format(stats.review_rate * 100) }}</div></div>
+  </div>
+
+  <h2>Pipeline architecture</h2>
+  <pre class="mermaid">{{ mermaid }}</pre>
+
+  <h2>Documents by format</h2>
+  <table>
+    <thead><tr><th>format</th><th class="num">documents</th></tr></thead>
+    <tbody>
+      {% for name, count in document_types_sorted %}
+      <tr><td>{{ name }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Charts</h2>
+  {% for name, fig in figures.items() %}
+  <h3>{{ fig.title }}</h3>
+  <img src="{{ figure_data_uris[name] }}" alt="{{ fig.title }}" />
+  {% endfor %}
+
+  <h2>Aggregates</h2>
+  <h3>Documents by category</h3>
+  <table>
+    <thead><tr><th>category</th><th class="num">documents</th><th class="num">estimated impact</th></tr></thead>
+    <tbody>
+      {% for name, count in category_counts_sorted %}
+      <tr><td>{{ name }}</td><td class="num">{{ count }}</td><td class="num">${{ stats.category_dollars.get(name, 0) | money }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Incidents per week</h3>
+  <table>
+    <thead><tr><th>week starting</th><th class="num">documents</th></tr></thead>
+    <tbody>
+      {% for week, count in week_counts_sorted %}
+      <tr><td>{{ week }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Severity distribution</h3>
+  <table>
+    <thead><tr><th>severity</th><th class="num">documents</th></tr></thead>
+    <tbody>
+      {% for name, count in severity_counts_sorted %}
+      <tr><td>{{ name }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Top vendors by document volume</h3>
+  <table>
+    <thead><tr><th>vendor</th><th class="num">documents</th></tr></thead>
+    <tbody>
+      {% for name, count in vendor_counts_sorted %}
+      <tr><td>{{ name }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Top stores by estimated impact</h3>
+  <table>
+    <thead><tr><th>store</th><th class="num">estimated impact</th></tr></thead>
+    <tbody>
+      {% for name, value in store_dollars_sorted %}
+      <tr><td>{{ name }}</td><td class="num">${{ value | money }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Scorecard — run <code>{{ run_id }}</code></h2>
+  <p>Documents scored: <strong>{{ scorecard.n_docs }}</strong> ·
+     macro accuracy <strong>{{ "%.3f" | format(scorecard.macro_accuracy) }}</strong> ·
+     category accuracy <strong>{{ "%.3f" | format(scorecard.category_accuracy) }}</strong></p>
+  <table>
+    <thead><tr><th>field</th><th class="num">n</th><th class="num">exact</th><th class="num">accuracy</th></tr></thead>
+    <tbody>
+      {% for field_name in gold_fields %}
+      {% set fs = scorecard.fields.get(field_name) %}
+      {% if fs %}
+      <tr><td>{{ field_name }}</td><td class="num">{{ fs.n }}</td><td class="num">{{ fs.exact_match }}</td><td class="num">{{ "%.3f" | format(fs.accuracy) }}</td></tr>
+      {% endif %}
+      {% endfor %}
+      <tr><td><strong>macro</strong></td><td class="num">{{ scorecard.n_docs }}</td><td class="num"></td><td class="num"><strong>{{ "%.3f" | format(scorecard.macro_accuracy) }}</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>needs_review flag quality</h3>
+  <table>
+    <thead><tr><th>metric</th><th class="num">value</th></tr></thead>
+    <tbody>
+      <tr><td>flagged</td><td class="num">{{ scorecard.review.flagged }}</td></tr>
+      <tr><td>true positive</td><td class="num">{{ scorecard.review.tp }}</td></tr>
+      <tr><td>false positive</td><td class="num">{{ scorecard.review.fp }}</td></tr>
+      <tr><td>false negative</td><td class="num">{{ scorecard.review.fn }}</td></tr>
+      <tr><td>precision</td><td class="num">{{ "%.3f" | format(scorecard.review.precision) }}</td></tr>
+      <tr><td>recall</td><td class="num">{{ "%.3f" | format(scorecard.review.recall) }}</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Category confusion matrix (gold x predicted)</h3>
+  <pre>{{ confusion_text }}</pre>
+
+  <h2>Review queue</h2>
+  <p>{{ stats.flagged_for_review }} extraction(s) fell below the confidence threshold this period
+     ({{ "%.1f%%" | format(stats.review_rate * 100) }} of all documents).
+     Use <code>opsreport review list --run-id {{ run_id }}</code> to triage and
+     <code>opsreport review fix</code> to log a correction.</p>
+</div>
+</body>
+</html>

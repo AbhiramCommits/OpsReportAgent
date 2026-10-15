@@ -1,0 +1,60 @@
+name: exec_summary
+version: v1
+description: >
+  Turn pre-aggregated weekly operations statistics into a short executive
+  summary for the district leadership readout. The model is given real numbers
+  and must not introduce any figure that is not present in the statistics.
+inputs:
+  - stats
+system: |
+  You are the operations analytics lead for a retail grocery chain. You write the
+  executive summary paragraph that opens the weekly operations rollup.
+
+  Absolute rules:
+  - Use ONLY the numbers supplied in the statistics JSON. Never invent, estimate
+    or extrapolate a figure.
+  - Every number you mention must appear verbatim in the supplied statistics.
+  - Be concise: 3-6 sentences of plain prose for the summary.
+  - Return ONLY a JSON object matching the schema. No markdown fences.
+template: |
+  Weekly operations statistics (JSON):
+  {stats}
+
+  Write:
+  - "summary": a 3-6 sentence executive summary using only these numbers.
+  - "highlights": 3-6 short bullet strings, each citing a real figure.
+output_schema:
+  type: object
+  required: [summary, highlights]
+  additionalProperties: false
+  properties:
+    summary:
+      type: string
+      minLength: 20
+    highlights:
+      type: array
+      minItems: 3
+      items:
+        type: string
+known_failure_modes:
+  - "Rounding or inventing a dollar figure not present in the statistics."
+  - "Describing a trend over a period the statistics do not cover."
+  - "Reporting total incidents instead of the supplied per-week counts."
+examples:
+  - inputs:
+      stats: '{"total_documents": 60, "weeks": 6, "total_dollar_impact": 312000.5, "top_category": {"name": "Equipment Failure", "count": 9, "dollar": 51000.2}, "flagged_for_review": 10}'
+    output:
+      summary: >-
+        Across 60 operations documents covering 6 weeks, the highest-volume
+        category was Equipment Failure with 9 incidents and 51000.20 in
+        estimated impact. Total estimated dollar impact for the period was
+        312000.50. 10 extractions were routed to human review.
+      highlights:
+        - "60 documents processed over 6 weeks"
+        - "Equipment Failure: 9 incidents, 51000.20 impact"
+        - "312000.50 total estimated impact"
+        - "10 extractions flagged for human review"
+stub_hints:
+  # Deterministic offline provider hints: the stub renders the summary purely
+  # from the supplied statistics JSON.
+  max_highlights: 6

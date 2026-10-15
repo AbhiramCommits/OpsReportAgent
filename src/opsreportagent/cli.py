@@ -227,6 +227,57 @@ def review_export_command(
     _echo(f"wrote {path}")
 
 
+@app.command("report")
+def report_command(
+    run_id: str = typer.Option(..., "--run-id"),
+    weeks: int = typer.Option(6, "--weeks", help="Weekly window to aggregate."),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Build the weekly rollup report (Markdown + HTML + charts)."""
+    from .report import build_report
+
+    settings = load_settings()
+    db = get_database(database_url or settings.database_url)
+    db.create_all()
+    artifacts = build_report(run_id, weeks=weeks, settings=settings)
+    _echo(f"executive summary: {artifacts.summary}")
+    for highlight in artifacts.highlights:
+        _echo(f"  - {highlight}")
+    _echo(f"wrote {artifacts.md_path}")
+    _echo(f"wrote {artifacts.html_path}")
+    for name, path in artifacts.figures.items():
+        _echo(f"  figure {name}: {path}")
+
+
+@app.command("schedule")
+def schedule_command(
+    weekly: bool = typer.Option(False, "--weekly", help="Run the full weekly job."),
+    run_id: str | None = typer.Option(None, "--run-id", help="Defaults to run-YYYYMMDD."),
+    threshold: float = typer.Option(0.75, "--threshold"),
+    prompt_version: str = typer.Option("v1", "--prompt-version"),
+    path: str | None = typer.Option(None, "--path", help="Corpus directory."),
+    weeks: int = typer.Option(6, "--weeks"),
+    database_url: str | None = typer.Option(None, "--database-url"),
+) -> None:
+    """Cron-friendly scheduled job: ingest -> run -> score -> report."""
+    from .schedule import run_weekly
+
+    if not weekly:
+        _echo("Nothing to do: pass --weekly to run the scheduled job.")
+        raise typer.Exit(code=1)
+
+    settings = load_settings()
+    result = run_weekly(
+        run_id=run_id,
+        settings=settings,
+        threshold=threshold,
+        prompt_version=prompt_version,
+        corpus_path=path,
+        weeks=weeks,
+    )
+    _echo(result.render())
+
+
 @app.command("info")
 def info_command() -> None:
     """Print the effective (secret-redacted) configuration and DB status."""

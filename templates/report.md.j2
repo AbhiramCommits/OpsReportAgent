@@ -1,0 +1,129 @@
+# Weekly Operations Rollup — `{{ run_id }}`
+
+_Generated {{ generated_at }} · {{ weeks }}-week window{% if stats.period %} · {{ stats.period }}{% endif %}_
+
+## Executive summary
+
+{{ summary }}
+
+{% if highlights %}
+**Highlights**
+
+{% for item in highlights %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+
+## Headline metrics
+
+| metric | value |
+| --- | ---: |
+| documents processed | {{ stats.total_documents }} |
+| total estimated dollar impact | {{ stats.total_dollar_impact | money }} |
+| flagged for human review | {{ stats.flagged_for_review }} |
+| review rate | {{ "%.1f%%" | format(stats.review_rate * 100) }} |
+| distinct stores | {{ stats.store_dollars | length }} |
+| distinct vendors | {{ stats.vendor_counts | length }} |
+
+## Pipeline architecture
+
+```mermaid
+{{ mermaid }}
+```
+
+## Documents by format
+
+| format | documents |
+| --- | ---: |
+{% for name, count in document_types_sorted %}
+| {{ name }} | {{ count }} |
+{% endfor %}
+
+## Charts
+
+{% for name, fig in figures.items() %}
+### {{ fig.title }}
+
+![{{ fig.title }}]({{ fig.path }})
+
+{% endfor %}
+
+## Aggregates
+
+### Documents by category
+
+| category | documents | estimated impact |
+| --- | ---: | ---: |
+{% for name, count in category_counts_sorted %}
+| {{ name }} | {{ count }} | {{ stats.category_dollars.get(name, 0) | money }} |
+{% endfor %}
+
+### Incidents per week
+
+| week starting | documents |
+| --- | ---: |
+{% for week, count in week_counts_sorted %}
+| {{ week }} | {{ count }} |
+{% endfor %}
+
+### Severity distribution
+
+| severity | documents |
+| --- | ---: |
+{% for name, count in severity_counts_sorted %}
+| {{ name }} | {{ count }} |
+{% endfor %}
+
+### Top vendors by document volume
+
+| vendor | documents |
+| --- | ---: |
+{% for name, count in vendor_counts_sorted %}
+| {{ name }} | {{ count }} |
+{% endfor %}
+
+### Top stores by estimated impact
+
+| store | estimated impact |
+| --- | ---: |
+{% for name, value in store_dollars_sorted %}
+| {{ name }} | {{ value | money }} |
+{% endfor %}
+
+## Scorecard — run `{{ run_id }}`
+
+Documents scored: **{{ scorecard.n_docs }}** · macro accuracy **{{ "%.3f" | format(scorecard.macro_accuracy) }}** · category accuracy **{{ "%.3f" | format(scorecard.category_accuracy) }}**
+
+| field | n | exact | accuracy |
+| --- | ---: | ---: | ---: |
+{% for field_name in gold_fields %}
+{% set fs = scorecard.fields.get(field_name) %}
+{% if fs %}
+| {{ field_name }} | {{ fs.n }} | {{ fs.exact_match }} | {{ "%.3f" | format(fs.accuracy) }} |
+{% endif %}
+{% endfor %}
+| **macro** | {{ scorecard.n_docs }} | | **{{ "%.3f" | format(scorecard.macro_accuracy) }}** |
+
+### needs_review flag quality
+
+| metric | value |
+| --- | ---: |
+| flagged | {{ scorecard.review.flagged }} |
+| true positive | {{ scorecard.review.tp }} |
+| false positive | {{ scorecard.review.fp }} |
+| false negative | {{ scorecard.review.fn }} |
+| precision | {{ "%.3f" | format(scorecard.review.precision) }} |
+| recall | {{ "%.3f" | format(scorecard.review.recall) }} |
+
+### Category confusion matrix (gold x predicted)
+
+```
+{{ confusion_text }}
+```
+
+## Review queue
+
+{{ stats.flagged_for_review }} extraction(s) fell below the confidence threshold this period
+({{ "%.1f%%" | format(stats.review_rate * 100) }} of all documents).
+Use `opsreport review list --run-id {{ run_id }}` to triage and
+`opsreport review fix` to log a correction.
